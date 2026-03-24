@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Time Tracker</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --line: #dbe3ee;
+        --accent: #2563eb;
+        --accent-2: #e8f0ff;
+        --good: #047857;
+        --warn: #b45309;
+        --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+        color: var(--text);
+        padding: 16px;
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: clamp(22px, 3vw, 30px);
+      }
+
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 16px 0;
+      }
+
+      .stat {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        min-height: 96px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .stat .label {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .stat .value {
+        font-size: clamp(24px, 4vw, 34px);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .stat.goal .value {
+        color: var(--accent);
+      }
+      .stat.current .value {
+        color: var(--good);
+      }
+      .stat.remaining .value {
+        color: var(--warn);
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        background: #fbfdff;
+      }
+
+      .toolbar .hint {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        background: var(--accent);
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
+      }
+
+      button:hover {
+        filter: brightness(0.96);
+      }
+      button.secondary {
+        background: #e5eefc;
+        color: #1e3a8a;
+        box-shadow: none;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      thead th {
+        text-align: left;
+        font-size: 13px;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        background: #f8fbff;
+        padding: 14px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      tbody td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid #cfd8e3;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 15px;
+        background: white;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+      }
+
+      input[readonly] {
+        background: #f8fafc;
+        color: #334155;
+      }
+
+      .total-cell {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .row-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .delete-btn {
+        background: #fee2e2;
+        color: #991b1b;
+        box-shadow: none;
+        padding: 10px 12px;
+      }
+
+      .footer-note {
+        padding: 12px 16px 16px;
+        color: var(--muted);
+        font-size: 13px;
+        border-top: 1px solid var(--line);
+        background: #fbfdff;
+      }
+
+      @media (max-width: 700px) {
+        body {
+          padding: 10px;
+        }
+        .stats {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .header,
+        .stat,
+        .panel {
+          border-radius: 14px;
+        }
+        .header {
+          padding: 14px;
+        }
+        h1 {
+          font-size: 22px;
+        }
+        .sub {
+          font-size: 13px;
+        }
+
+        .toolbar {
+          padding: 10px 12px;
+          gap: 8px;
+        }
+
+        .toolbar > div,
+        .toolbar .hint,
+        .row-actions,
+        button {
+          width: 100%;
+        }
+
+        .table-scroll {
+          overflow-x: hidden;
+        }
+
+        table {
+          min-width: 0;
+          table-layout: fixed;
+        }
+
+        thead th,
+        tbody td {
+          padding: 8px 6px;
+          font-size: 12px;
+        }
+
+        thead th {
+          white-space: normal;
+        }
+
+        input {
+          padding: 8px 8px;
+          font-size: 13px;
+        }
+
+        .delete-btn {
+          padding: 8px 8px;
+          font-size: 12px;
+        }
+
+        .total-cell {
+          font-size: 13px;
+        }
+
+        .footer-note {
+          font-size: 12px;
+          padding: 10px 12px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <h1>Simple Time Tracker</h1>
+        <div class="sub">
+          Enter times as 24-hour values like <strong>0800</strong> or
+          <strong>1340</strong>. The <strong>START</strong> time for each row
+          after the first is filled automatically from the previous row's
+          <strong>END + TRAVEL</strong>. Put <strong>L</strong> in travel for
+          lunch, and it will count as <strong>30 minutes</strong>.
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat goal">
+          <div class="label">Goal</div>
+          <div class="value" id="goalValue">480 min</div>
+        </div>
+        <div class="stat current">
+          <div class="label">Current total</div>
+          <div class="value" id="currentValue">0 min</div>
+        </div>
+        <div class="stat remaining">
+          <div class="label">Minutes left</div>
+          <div class="value" id="remainingValue">480 min</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <div class="hint">
+            Tip: use the Add Row button to keep building your day.
+          </div>
+          <div class="row-actions">
+            <button type="button" id="addRowBtn">Add Row</button>
+            <button type="button" class="secondary" id="resetBtn">Reset</button>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 18%">START</th>
+                <th style="width: 18%">END</th>
+                <th style="width: 18%">TRAVEL</th>
+                <th style="width: 18%">TOTAL</th>
+                <th style="width: 10%"></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+
+        <div class="footer-note">
+          TOTAL is calculated as END − START in minutes. If the value crosses
+          midnight, it will wrap correctly.
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const GOAL = 480;
+      const rowsEl = document.getElementById("rows");
+      const currentValue = document.getElementById("currentValue");
+      const remainingValue = document.getElementById("remainingValue");
+      const addRowBtn = document.getElementById("addRowBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      function pad2(n) {
+        return String(n).padStart(2, "0");
+      }
+
+      function formatMins(mins) {
+        return `${mins} min`;
+      }
+
+      function parseTime(str) {
+        if (!str) return null;
+        const digits = String(str).replace(/\D/g, "");
+        if (digits.length !== 4) return null;
+        const hh = Number(digits.slice(0, 2));
+        const mm = Number(digits.slice(2, 4));
+        if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+        return hh * 60 + mm;
+      }
+
+      function formatTime(totalMinutes) {
+        const mins = ((totalMinutes % 1440) + 1440) % 1440;
+        const hh = Math.floor(mins / 60);
+        const mm = mins % 60;
+        return `${pad2(hh)}${pad2(mm)}`;
+      }
+
+      function parseTravel(str) {
+        const v = String(str || "")
+          .trim()
+          .toUpperCase();
+        if (!v) return 0;
+        if (v === "L") return 30;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 ? n : 0;
+      }
+
+      function createRow(index) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+        <td data-label="Start"><input class="start" type="text" inputmode="numeric" placeholder="0800" ${index === 0 ? "" : "readonly"}></td>
+        <td data-label="End"><input class="end" type="text" inputmode="numeric" placeholder="1340"></td>
+        <td data-label="Travel"><input class="travel" type="text" placeholder="15 or L"></td>
+        <td class="total-cell" data-label="Total"><span class="total">0</span> min</td>
+        <td data-label="Action"><button type="button" class="delete-btn">Delete</button></td>
+      `;
+
+        tr.querySelector(".delete-btn").addEventListener("click", () => {
+          if (rowsEl.children.length > 1) {
+            tr.remove();
+            recalc();
+          }
+        });
+
+        tr.querySelectorAll("input").forEach((input) => {
+          input.addEventListener("input", recalc);
+        });
+
+        return tr;
+      }
+
+      function ensureOneRow() {
+        if (rowsEl.children.length === 0) {
+          rowsEl.appendChild(createRow(0));
+        }
+      }
+
+      function recalc() {
+        const rows = [...rowsEl.querySelectorAll("tr")];
+        let sum = 0;
+
+        rows.forEach((row, index) => {
+          const startInput = row.querySelector(".start");
+          const endInput = row.querySelector(".end");
+          const travelInput = row.querySelector(".travel");
+          const totalSpan = row.querySelector(".total");
+
+          const travel = parseTravel(travelInput.value);
+          const isLunch =
+            String(travelInput.value || "")
+              .trim()
+              .toUpperCase() === "L";
+
+          if (index === 0) {
+            startInput.readOnly = false;
+          } else {
+            const prevRow = rows[index - 1];
+            const prevEnd = parseTime(prevRow.querySelector(".end").value);
+            const prevTravel = parseTravel(
+              prevRow.querySelector(".travel").value,
+            );
+
+            if (prevEnd !== null) {
+              startInput.value = formatTime(prevEnd + prevTravel);
+            } else {
+              startInput.value = "";
+            }
+            startInput.readOnly = true;
+          }
+
+          const start = parseTime(startInput.value);
+          const end = parseTime(endInput.value);
+          let total = 0;
+
+          if (start !== null && end !== null) {
+            total = end - start;
+            if (total < 0) total += 1440;
+          }
+
+          totalSpan.textContent = total;
+          sum += total;
+          if (!isLunch) {
+            sum += travel;
+          }
+        });
+
+        currentValue.textContent = formatMins(sum);
+        remainingValue.textContent = formatMins(Math.max(GOAL - sum, 0));
+      }
+
+      function resetTable() {
+        rowsEl.innerHTML = "";
+        rowsEl.appendChild(createRow(0));
+        recalc();
+      }
+
+      addRowBtn.addEventListener("click", () => {
+        rowsEl.appendChild(createRow(rowsEl.children.length));
+        recalc();
+      });
+
+      resetBtn.addEventListener("click", resetTable);
+
+      // Start with a few blank rows so it is usable right away.
+      rowsEl.appendChild(createRow(0));
+      rowsEl.appendChild(createRow(1));
+      rowsEl.appendChild(createRow(2));
+      recalc();
+    </script>
+  </body>
+</html>
